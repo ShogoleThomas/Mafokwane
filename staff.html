@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Staff Panel - Spaza Shop</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f2f2f2;
+    }
+    header {
+      background-color: #4CAF50;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+    }
+    #loggedInUser {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    #searchBar {
+      width: 90%;
+      margin: 15px auto;
+      padding: 10px;
+      font-size: 16px;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+      padding: 15px;
+      min-height: 300px;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .card img {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .card h3 {
+      margin: 10px 0 5px;
+    }
+    .card p {
+      font-size: 14px;
+      margin: 5px 0;
+    }
+
+    /* Loading overlay & spinner */
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      display: none; /* initially hidden */
+    }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #4CAF50;
+      border-radius: 50%;
+      width: 50px; height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% {transform: rotate(0deg);}
+      100% {transform: rotate(360deg);}
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Staff Panel</h1>
+  <div id="loggedInUser">Logged in as: <span id="adminName"></span></div>
+</header>
+
+<input type="text" id="searchBar" placeholder="Search products by name..." oninput="renderProducts()" />
+
+<div id="loadingOverlay"><div class="loader"></div></div>
+
+<div class="product-grid" id="productGrid"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBkkmD2-QScOoPdPxVWNAaaV9tBH8dI_sc",
+    authDomain: "mafokwane-398f1.firebaseapp.com",
+    projectId: "mafokwane-398f1",
+    storageBucket: "mafokwane-398f1.appspot.com",
+    messagingSenderId: "518088242816",
+    appId: "1:518088242816:web:1e5d9403fd3f5075c39865"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const productsRef = collection(db, "products");
+
+  let products = [];
+
+  async function loadProducts() {
+    document.getElementById("loadingOverlay").style.display = "flex";
+    try {
+      const snapshot = await getDocs(productsRef);
+      products = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      renderProducts();
+    } catch (e) {
+      console.error("Error loading products:", e);
+      alert("Failed to load products. See console.");
+    } finally {
+      document.getElementById("loadingOverlay").style.display = "none";
+    }
+  }
+
+  function renderProducts() {
+    const grid = document.getElementById("productGrid");
+    const searchTerm = document.getElementById("searchBar").value.toLowerCase();
+    grid.innerHTML = "";
+
+    const filtered = products.filter(p =>
+      p.name.toLowerCase().includes(searchTerm)
+    );
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#666;">No products match your search.</p>';
+      return;
+    }
+
+    filtered.forEach(product => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${product.image}" alt="${product.name}" />
+        <h3>${product.name}</h3>
+        <p>Price: R${product.price.toFixed(2)}</p>
+        <p>Qty: ${product.qty}</p>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // Set logged in user display
+  document.getElementById("adminName").textContent = localStorage.getItem("user") || "Unknown";
+
+  // Initial load
+  loadProducts();
+
+</script>
+
+</body>
+</html>

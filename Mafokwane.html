@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard - Spaza Shop</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f2f2f2;
+    }
+
+    header {
+      background-color: #4CAF50;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    #loggedInUser {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    #searchBar {
+      width: 90%;
+      margin: 15px auto;
+      padding: 10px;
+      font-size: 16px;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+      padding: 15px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .card img {
+      width: 100%;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .card h3 {
+      margin: 10px 0 5px;
+    }
+
+    .card p {
+      font-size: 14px;
+      margin: 5px 0;
+    }
+
+    .card button {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    .card button:hover {
+      background-color: #45a049;
+    }
+
+    .danger {
+      background-color: #f44336;
+    }
+
+    .danger:hover {
+      background-color: #d32f2f;
+    }
+
+    #addBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
+      cursor: pointer;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    .modal-content button {
+      margin-top: 15px;
+      padding: 10px;
+      width: 100%;
+    }
+	
+	
+	
+	
+	#loadingOverlay {
+	  position: fixed;
+	  top: 0;
+	  left: 0;
+	  width: 100vw;
+	  height: 100vh;
+	  background: rgba(255, 255, 255, 0.8); /* light fade */
+	  display: flex;
+	  justify-content: center;
+	  align-items: center;
+	  z-index: 9999;
+	}
+
+	.loader {
+	  border: 6px solid #f3f3f3;
+	  border-top: 6px solid #4CAF50;
+	  border-radius: 50%;
+	  width: 50px;
+	  height: 50px;
+	  animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+	  0% { transform: rotate(0deg); }
+	  100% { transform: rotate(360deg); }
+	}
+
+
+  </style>
+</head>
+<body>
+
+
+
+<header>
+  <h1>Admin Dashboard</h1>
+  <div id="loggedInUser">Logged in as: <span id="adminName"></span></div>
+</header>
+
+<input
+  type="text"
+  id="searchBar"
+  placeholder="Search products by name..."
+  oninput="renderProducts()"
+/>
+
+<div id="loadingOverlay" style="display:none;">
+  <div class="loader"></div>
+</div>
+
+<div class="product-grid" id="productGrid"></div>
+
+<button id="addBtn" onclick="openAddModal()">+</button>
+
+<!-- Add Product Modal -->
+<div class="modal" id="addModal">
+  <div class="modal-content">
+    <h2>Add Product</h2>
+    <input type="text" id="prodName" placeholder="Product Name" />
+    <input type="number" id="prodPrice" placeholder="Price (ZAR)" />
+    <input type="number" id="prodQty" placeholder="Quantity" />
+    <input type="file" id="prodImage" accept="image/*" capture="environment" />
+    <button onclick="addProduct()">Add Product</button>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <h2>Edit Product</h2>
+    <input type="text" id="editName" />
+    <input type="number" id="editPrice" />
+    <input type="number" id="editQty" />
+    <input type="file" id="editImage" accept="image/*" capture="environment" />
+    <button onclick="saveEdit()">Save Changes</button>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    getDocs,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    doc,
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBkkmD2-QScOoPdPxVWNAaaV9tBH8dI_sc",
+    authDomain: "mafokwane-398f1.firebaseapp.com",
+    projectId: "mafokwane-398f1",
+    storageBucket: "mafokwane-398f1.appspot.com",
+    messagingSenderId: "518088242816",
+    appId: "1:518088242816:web:1e5d9403fd3f5075c39865",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const productsRef = collection(db, "products");
+
+  let products = [];
+  let editingId = null;
+
+  async function loadProducts() {
+    document.getElementById("loadingOverlay").style.display = "flex";
+
+    try {
+      const snapshot = await getDocs(productsRef);
+      products = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      renderProducts();
+    } catch (error) {
+      console.error("Error loading products:", error);
+      alert("Failed to load products. Check console for details.");
+    } finally {
+      document.getElementById("loadingOverlay").style.display = "none";
+    }
+  }
+
+  function renderProducts() {
+    const grid = document.getElementById("productGrid");
+    const searchTerm = document.getElementById("searchBar").value.toLowerCase();
+    grid.innerHTML = "";
+
+    const filteredProducts = products.filter((product) =>
+      product.name.toLowerCase().includes(searchTerm)
+    );
+
+    if (filteredProducts.length === 0) {
+      grid.innerHTML =
+        '<p style="grid-column: 1 / -1; text-align: center; color: #666;">No products match your search.</p>';
+      return;
+    }
+
+    filteredProducts.forEach((product) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <img src="${product.image}" alt="${product.name}">
+        <h3>${product.name}</h3>
+        <p>Price: R${product.price.toFixed(2)}</p>
+        <p>Qty: ${product.qty}</p>
+        <button onclick="openEditModal('${product.id}')">Edit</button>
+        <button class="danger" onclick="removeProduct('${product.id}')">Remove</button>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  window.openAddModal = function () {
+    document.getElementById("prodName").value = "";
+    document.getElementById("prodPrice").value = "";
+    document.getElementById("prodQty").value = "";
+    document.getElementById("prodImage").value = "";
+    document.getElementById("addModal").style.display = "flex";
+  };
+
+  window.openEditModal = function (id) {
+    const product = products.find((p) => p.id === id);
+    if (!product) return;
+    editingId = id;
+    document.getElementById("editName").value = product.name;
+    document.getElementById("editPrice").value = product.price;
+    document.getElementById("editQty").value = product.qty;
+    document.getElementById("editImage").value = "";
+    document.getElementById("editModal").style.display = "flex";
+  };
+
+  window.addProduct = async function () {
+    const name = document.getElementById("prodName").value;
+    const price = parseFloat(document.getElementById("prodPrice").value);
+    const qty = parseInt(document.getElementById("prodQty").value);
+    const file = document.getElementById("prodImage").files[0];
+
+    if (!name || isNaN(price) || isNaN(qty) || !file) {
+      alert("All fields are required.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+      await addDoc(productsRef, {
+        name,
+        price,
+        qty,
+        image: e.target.result,
+      });
+      closeModals();
+      loadProducts();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.saveEdit = async function () {
+    const name = document.getElementById("editName").value;
+    const price = parseFloat(document.getElementById("editPrice").value);
+    const qty = parseInt(document.getElementById("editQty").value);
+    const file = document.getElementById("editImage").files[0];
+
+    if (!name || isNaN(price) || isNaN(qty)) {
+      alert("Fill in all fields.");
+      return;
+    }
+
+    const docRef = doc(db, "products", editingId);
+    const current = products.find((p) => p.id === editingId);
+
+    function update(imageData) {
+      updateDoc(docRef, {
+        name,
+        price,
+        qty,
+        image: imageData || current.image,
+      }).then(() => {
+        closeModals();
+        loadProducts();
+      });
+    }
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => update(e.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      update();
+    }
+  };
+
+  window.removeProduct = async function (id) {
+    if (confirm("Remove this product?")) {
+      await deleteDoc(doc(db, "products", id));
+      loadProducts();
+    }
+  };
+
+  window.closeModals = function () {
+    document.getElementById("addModal").style.display = "none";
+    document.getElementById("editModal").style.display = "none";
+  };
+
+  window.onclick = function (e) {
+    if (e.target.classList.contains("modal")) closeModals();
+  };
+
+  document.getElementById("adminName").textContent =
+    localStorage.getItem("user") || "Unknown";
+
+  // Initial load
+  loadProducts();
+</script>
+
+
+
+
+</body>
+</html>

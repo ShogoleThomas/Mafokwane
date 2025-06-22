@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Select User & Login</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0; padding: 0;
+    display: flex; justify-content: center; align-items: center; height: 100vh;
+  }
+  #container {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    width: 320px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  h2 {
+    color: #4CAF50;
+    margin-bottom: 20px;
+  }
+  #userList button {
+    display: block;
+    width: 100%;
+    margin: 6px 0;
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid #4CAF50;
+    background: white;
+    color: #4CAF50;
+    transition: 0.3s;
+  }
+  #userList button:hover {
+    background: #4CAF50;
+    color: white;
+  }
+  #passwordSection {
+    display: none;
+    margin-top: 20px;
+  }
+  #passwordInput {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  #loginBtn {
+    margin-top: 15px;
+    width: 100%;
+    padding: 12px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  #loginBtn:hover {
+    background: #45a049;
+  }
+  #errorMsg {
+    color: red;
+    margin-top: 15px;
+    font-weight: bold;
+  }
+  #welcomeMsg {
+    margin-top: 15px;
+    color: green;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<div id="container">
+  <h2>Select Your Name</h2>
+  <div id="userList"></div>
+
+  <div id="passwordSection">
+    <p>Enter password for <span id="selectedUserName"></span>:</p>
+    <input type="password" id="passwordInput" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <div id="errorMsg"></div>
+    <div id="welcomeMsg"></div>
+  </div>
+</div>
+
+<script>
+  // Users with their default passwords and roles
+  const users = [
+    { name: "Boitumelo", password: "boitumelo123", role: "admin" },
+    { name: "David", password: "david123", role: "admin" },
+    { name: "Kholofelo", password: "kholofelo123", role: "staff" },
+    { name: "Kagiso", password: "kagiso123", role: "staff" },
+    { name: "Lethabo", password: "lethabo123", role: "staff" },
+    { name: "User3", password: "user3123", role: "staff" },
+    { name: "User4", password: "user4123", role: "staff" }
+  ];
+
+  const userListDiv = document.getElementById("userList");
+  const passwordSection = document.getElementById("passwordSection");
+  const selectedUserNameSpan = document.getElementById("selectedUserName");
+  const passwordInput = document.getElementById("passwordInput");
+  const loginBtn = document.getElementById("loginBtn");
+  const errorMsg = document.getElementById("errorMsg");
+  const welcomeMsg = document.getElementById("welcomeMsg");
+
+  let selectedUser = null;
+
+  // Display user names as buttons
+  function displayUserNames() {
+    userListDiv.innerHTML = "";
+    users.forEach(user => {
+      const btn = document.createElement("button");
+      btn.textContent = user.name;
+      btn.addEventListener("click", () => {
+        selectedUser = user;
+        selectedUserNameSpan.textContent = user.name;
+        passwordSection.style.display = "block";
+        errorMsg.textContent = "";
+        welcomeMsg.textContent = "";
+        passwordInput.value = "";
+        passwordInput.focus();
+      });
+      userListDiv.appendChild(btn);
+    });
+  }
+
+  // Login button click handler
+  loginBtn.addEventListener("click", () => {
+    const enteredPassword = passwordInput.value;
+    errorMsg.textContent = "";
+    welcomeMsg.textContent = "";
+
+    if (!enteredPassword) {
+      errorMsg.textContent = "Please enter your password.";
+      return;
+    }
+
+    if (selectedUser.password === enteredPassword) {
+      welcomeMsg.textContent = `Welcome, ${selectedUser.name}! Redirecting...`;
+      errorMsg.textContent = "";
+
+      localStorage.setItem("user", selectedUser.name);
+      localStorage.setItem("role", selectedUser.role);
+
+      setTimeout(() => {
+        if (selectedUser.role === "admin") {
+          window.location.href = "Mafokwane.html";
+        } else {
+          window.location.href = "staff.html";
+        }
+      }, 1500);
+    } else {
+      errorMsg.textContent = "Incorrect password. Please try again.";
+    }
+  });
+
+  // Initialize
+  displayUserNames();
+</script>
+
+</body>
+</html>
